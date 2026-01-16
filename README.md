@@ -1,0 +1,75 @@
+# Akarin
+
+Akarin is a object-oriented design microkernel written in Rust, the successor of `Hikari` kernel. Currently I only track the implement progress here, before it is ready to run.
+
+## TODO
+
+- [x] Toolchain
+  - [x] A modified version of `zig` as Mach-O linker for non-Apple and freestanding targets.
+- [ ] Akarin Bootloader
+  - [x] PIE Mach-O Loader (For `ld64.lld` compatibility)
+  - [x] Configuration Parser
+  - [x] Interactive mode
+  - [ ] Custom Page Mapper based on our own abstractions
+  - [x] Can boot a simple kernel
+  - [ ] Map kernel stack instead of directly using HHDM map
+- [ ] Akarin Kernel
+  - [ ] libakarin
+    - [ ] Core (Abstraction)
+      - [ ] Scheduler Abstraction
+      - [x] Clock/Timer Abstraction
+      - [ ] Interrupt Abstraction (Well, in a mess currently)
+        - [x] Interrupt Controller
+        - [x] Trap Handler
+        - [ ] Refactor Abstractions
+      - [ ] Io Abstraction
+      - [ ] Memory Abstraction
+        - [x] Page Table
+        - [x] Address Space
+        - [x] Frame Allocator
+        - [ ] Object Allocator
+      - [x] Sync Abstraction
+        - [x] Scoped Guard
+        - [x] Garbage Collector
+      - [x] Context Abstraction (May change during implementation)
+        - [x] Trap Context
+        - [x] User Context
+      - [x] CPU Abstraction
+        - [x] per-CPU controller (interrupt, per-CPU data init, cpu-id obtain)
+        - [x] per-CPU variable 
+      - [ ] Machine (ISA) Abstraction
+        - [ ] Wireup all types
+        - [ ] Initialization Abstraction (?)
+    - [ ] Memory
+      - [x] Sparse Memory Model
+      - [x] Buddy Physical Frame Allocator
+      - [x] Slub Object Allocator
+      - [ ] Top level Allocator
+    - [ ] Sync
+      - [ ] Spin
+        - [x] SpinLock
+        - [ ] RwLock
+        - [ ] Barrier
+        - [ ] OnceLock
+      - [ ] Async
+        - [ ] Mutex
+        - [ ] Semaphore
+        - [ ] RwLock
+        - [ ] Condvar
+        - [ ] Barrier
+    - [ ] Object Pool
+      - [x] Lock-free flat object map
+      - [ ] Object data structure
+        - [x] Just work
+        - [ ] Simplify design (Require `Condvar` implementation)
+        - [ ] Capatibility support
+  - [ ] akarin
+    - [ ] Kernel Runtime
+      - [ ] Thread model on the top of Rust async model
+      - [ ] `EEVDF` async executor
+      - [ ] Time scheduler (May migrate from `Hikari` kernel)
+    - [ ] Kernel
+      - [ ] Process Model managing resource
+      - [ ] Syscall
+      - [ ] SMP
+      - [ ] Maybe more, let's finish `libakarin` first.
