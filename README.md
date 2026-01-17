@@ -22,6 +22,10 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [x] Interrupt Controller
         - [x] Trap Handler
         - [ ] Refactor Abstractions
+          - [ ] MSI/MSI-X interrupt abstraction
+          - [x] IRQ Register
+          - [x] IRQ Migrate
+          - [ ] IRQ Allocation Abstraction (Maybe abstract IRQ resource as an independent object? Just let driver to aquire them from object pool? Or abstract them as a kind of capability and bound to device objects? Let's finish my object pool first, then I'll figure out this.)
       - [ ] Io Abstraction
       - [ ] Memory Abstraction
         - [x] Page Table
@@ -46,11 +50,12 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
       - [x] Slub Object Allocator
       - [ ] Top level Allocator
     - [ ] Sync
-      - [ ] Spin
+      - [x] Spin
         - [x] SpinLock
-        - [ ] RwLock
-        - [ ] Barrier
-        - [ ] OnceLock
+        - [x] RwLock
+        - [x] Barrier
+        - [x] OnceLock
+        - [x] Lazy
       - [ ] Async
         - [ ] Mutex
         - [ ] Semaphore
