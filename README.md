@@ -34,7 +34,7 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [ ] Object Allocator
       - [x] Sync Abstraction
         - [x] Scoped Guard
-        - [x] Garbage Collector
+        - [ ] Garbage Collector (Just refactored, we need a new abstraction)
       - [x] Context Abstraction (May change during implementation)
         - [x] Trap Context
         - [x] User Context
@@ -62,6 +62,10 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [ ] RwLock
         - [ ] Condvar
         - [ ] Barrier
+      - [x] Garbage Collector
+        - [x] Atomic Primitives (Adapt from `crossbeam-epoch`)
+        - [x] Lock-free linked list (Adapt from `crossbeam-epoch`)
+        - [x] Hyaline-1 Garbage Collector (Based on `seize`, drop `tls` backend and port to `no_std` environment)
     - [ ] Object Pool
       - [x] Lock-free flat object map
       - [ ] Object data structure
