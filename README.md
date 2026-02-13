@@ -34,7 +34,6 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [ ] Object Allocator
       - [x] Sync Abstraction
         - [x] Scoped Guard
-        - [ ] Garbage Collector (Just refactored, we need a new abstraction)
       - [x] Context Abstraction (May change during implementation)
         - [x] Trap Context
         - [x] User Context
@@ -45,9 +44,8 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [ ] Wireup all types
         - [ ] Initialization Abstraction (?)
     - [ ] Memory
-      - [x] Sparse Memory Model
-      - [x] Buddy Physical Frame Allocator
-      - [x] Slub Object Allocator
+      - [ ] Integrate LLFree Frame Allocator
+      - [ ] Slub Object Allocator
       - [ ] Top level Allocator
     - [ ] Sync
       - [x] Spin
@@ -56,22 +54,21 @@ Akarin is a object-oriented design microkernel written in Rust, the successor of
         - [x] Barrier
         - [x] OnceLock
         - [x] Lazy
-      - [ ] Async
-        - [ ] Mutex
-        - [ ] Semaphore
-        - [ ] RwLock
-        - [ ] Condvar
-        - [ ] Barrier
+      - [x] Async
+        - [x] Mutex
+        - [x] Semaphore
+        - [x] RwLock
+        - [x] Condvar
+        - [x] Barrier
       - [x] Garbage Collector
         - [x] Atomic Primitives (Adapt from `crossbeam-epoch`)
         - [x] Lock-free linked list (Adapt from `crossbeam-epoch`)
-        - [x] Hyaline-1 Garbage Collector (Based on `seize`, drop `tls` backend and port to `no_std` environment)
-    - [ ] Object Pool
-      - [x] Lock-free flat object map
-      - [ ] Object data structure
-        - [x] Just work
-        - [ ] Simplify design (Require `Condvar` implementation)
-        - [ ] Capatibility support
+        - [x] Hyaline-1 Garbage Collector (Based on `seize`, drop `tls` backend and ported to `no_std` environment)
+    - [ ] Object Subsystem
+      - [x] Object Model
+      - [x] Capability Model
+      - [x] Registry
+      - [ ] Event Dispatcher (Requires task system to be done)
   - [ ] akarin
     - [ ] Kernel Runtime
       - [ ] Thread model on the top of Rust async model
