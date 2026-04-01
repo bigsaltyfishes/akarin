@@ -1,0 +1,26 @@
+[workspace]
+resolver = "3"
+members = [
+    "bootloader",
+    "kernel",
+    "library/collections",
+    "library/core",
+    "library/dyld",
+    "library/macros",
+    "library/machine",
+    "library/object",
+    "library/sync",
+    "library/syscall",
+    "userland/bootstrap",
+    "userland/runtime",
+]
+exclude = [
+    "reference/linked-list-allocator",
+    "reference/llfree-rs",
+    "reference/llfree-rs/core",
+    "reference/dlmalloc-rs",
+    "lint/deny_small_functions",
+]
+
+[profile.dev]
+opt-level = 3

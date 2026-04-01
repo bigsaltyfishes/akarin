@@ -1,0 +1,8 @@
+**/**/target
+/reference
+/*.md
+/.venv
+/.vscode
+/.zed
+/.direnv
+/spec

@@ -1,0 +1,9 @@
+[package]
+name = "libakarin-dyld"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+goblin = { version = "0.10.3", default-features = false, features = ["mach64"] }
+thiserror = { version = "2.0.17", default-features = false }
+log = "0.4.28"

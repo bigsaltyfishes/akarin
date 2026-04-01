@@ -1,0 +1,34 @@
+[package]
+name = "akarin_kernel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+llfree = { path = "../reference/llfree-rs/core", default-features = false }
+libakarin-boot-proto = { path = "../bootloader/protocol" }
+libakarin-macros = { path = "../library/macros" }
+libakarin-machine-core = { path = "../library/machine" }
+libakarin-syscall = { path = "../library/syscall" }
+libakarin-core = { path = "../library/core" }
+libakarin-collections = { path = "../library/collections" }
+libakarin-sync = { path = "../library/sync" }
+libakarin-object = { path = "../library/object" }
+log = { version = "0.4.29", default-features = false }
+x86 = "0.52.0"
+x86_64 = "0.15.4"
+async-channel = { version = "2.5.0", default-features = false }
+libakarin-dyld = { path = "../library/dyld" }
+rustc-demangle = "0.1"
+thiserror = { version = "2.0.18", default-features = false }
+aligned-vec = { version = "0.6.4", default-features = false }
+acpi = "6.1.0"
+async-task = { path = "../reference/async-task", default-features = false, features = ["portable-atomic"] }
+intrusive-collections = { path = "../reference/intrusive-rs", default-features = false, features = ["alloc"] }
+bitflags = "2.11.0"
+bitfield = "0.19.4"
+hashbrown = "0.16.1"
+raw-cpuid = "10.7.0"
+linkme = "0.3.35"
+unifont = "1.1.0"
+async-trait = "0.1.89"
+pin-project = "1.1.11"

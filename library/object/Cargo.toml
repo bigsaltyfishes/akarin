@@ -1,0 +1,20 @@
+[package]
+name = "libakarin-object"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.89"
+atomig = { version = "0.4.3", features = ["derive"] }
+bitflags = "2.10.0"
+crossbeam-queue = { version = "0.3.12", default-features = false, features = ["alloc"] }
+libakarin-collections = { path = "../collections" }
+libakarin-macros = { path = "../macros" }
+libakarin-syscall = { path = "../syscall" }
+libakarin-sync = { path = "../sync" }
+log = "0.4.29"
+thiserror = { version = "2.0.18", default-features = false }
+
+[dev-dependencies]
+lazy_static = "1.5.0"
+libakarin-sync = { path = "../sync", features = ["host-thread-local-gc"] }

@@ -1,0 +1,10 @@
+[package]
+name = "userland-runtime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dlmalloc = { path = "../../reference/dlmalloc-rs", default-features = false, features = ["akarin-no-system"] }
+libakarin-core = { path = "../../library/core" }
+libakarin-syscall = { path = "../../library/syscall" }
+spin = "0.10.0"

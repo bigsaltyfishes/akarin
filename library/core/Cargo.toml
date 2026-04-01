@@ -1,0 +1,18 @@
+[package]
+name = "libakarin-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitflags = "2.10.0"
+chrono = { version = "0.4.42", default-features = false, features = ["alloc"] }
+numeric-enum-macro = "0.2.0"
+libakarin-boot-proto = { path = "../../bootloader/protocol" }
+libakarin-object = { path = "../object" }
+libakarin-syscall = { path = "../syscall" }
+libakarin-sync = { path = "../sync" }
+libakarin-collections = { path = "../collections" }
+libakarin-macros = { path = "../macros" }
+libakarin-machine-core = { path = "../machine" }
+thiserror = { version = "2.0.18", default-features = false }
+async-trait = "0.1.89"

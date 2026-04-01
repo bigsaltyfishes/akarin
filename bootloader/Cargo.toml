@@ -1,0 +1,33 @@
+[package]
+name = "akarin-bootloader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+goblin = { version = "0.10.3", default-features = false, features = ["mach64", "pe32"] }
+lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
+log = "0.4.28"
+spin = { version = "0.10.0", default-features = false, features = [
+    "barrier",
+    "lock_api",
+    "mutex",
+    "once",
+    "rwlock",
+    "ticket_mutex",
+    "use_ticket_mutex",
+] }
+thiserror = { version = "2.0.17", default-features = false }
+uart_16550 = "0.4.0"
+uefi = { version = "0.36.1", features = ["logger", "alloc", "global_allocator"]  }
+unifont = "1.1.0"
+x86_64 = "0.15.2"
+aligned-vec = { version = "0.6.4", default-features = false }
+libakarin-boot-proto = { path = "./protocol" }
+libakarin-dyld = { path = "../library/dyld" }
+libakarin-core = { path = "../library/core" }
+libakarin-machine-core = { path = "../library/machine" }
+object = { version = "0.37.3", default-features = false, features = ["macho", "pe", "read_core"] }
+
+[features]
+default = ["logger_debug"]
+logger_debug = []

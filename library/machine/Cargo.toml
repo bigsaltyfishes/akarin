@@ -1,0 +1,11 @@
+[package]
+name = "libakarin-machine-core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bitflags = "2.10.0"
+numeric-enum-macro = "0.2.0"
+libakarin-macros = { path = "../macros" }
+libakarin-syscall = { path = "../syscall" }
+thiserror = { version = "2.0.18", default-features = false }

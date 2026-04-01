@@ -1,0 +1,676 @@
+//! A set based on a lock-free skip list. See [`SkipSet`].
+
+use core::{
+    fmt,
+    ops::{Bound, Deref, RangeBounds},
+};
+
+use super::{equivalent::Comparable, map};
+use crate::gc::{GarbageCollector, GlobalGc};
+
+/// A set based on a lock-free skip list.
+///
+/// This is an alternative to [`BTreeSet`] which supports
+/// concurrent access across multiple threads.
+///
+/// [`BTreeSet`]: std::collections::BTreeSet
+pub struct SkipSet<T, G = GlobalGc>
+where
+    G: GarbageCollector,
+{
+    inner: map::SkipMap<T, (), G>,
+}
+
+impl<T, G> SkipSet<T, G>
+where
+    G: GarbageCollector,
+{
+    /// Returns a new, empty set.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set: SkipSet<i32> = SkipSet::new();
+    /// ```
+    pub fn new() -> Self {
+        Self {
+            inner: map::SkipMap::new(),
+        }
+    }
+
+    /// Returns `true` if the set is empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// assert!(set.is_empty());
+    ///
+    /// set.insert(1);
+    /// assert!(!set.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
+    /// Returns the number of entries in the set.
+    ///
+    /// If the set is being concurrently modified, consider the returned number
+    /// just an approximation without any guarantees.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// assert_eq!(set.len(), 0);
+    ///
+    /// set.insert(1);
+    /// assert_eq!(set.len(), 1);
+    /// ```
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+impl<T, G> SkipSet<T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    /// Returns the entry with the smallest key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(1);
+    /// assert_eq!(*set.front().unwrap(), 1);
+    /// set.insert(2);
+    /// assert_eq!(*set.front().unwrap(), 1);
+    /// ```
+    pub fn front(&self) -> Option<Entry<'_, T, G>> {
+        self.inner.front().map(Entry::new)
+    }
+
+    /// Returns the entry with the largest key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(1);
+    /// assert_eq!(*set.back().unwrap(), 1);
+    /// set.insert(2);
+    /// assert_eq!(*set.back().unwrap(), 2);
+    /// ```
+    pub fn back(&self) -> Option<Entry<'_, T, G>> {
+        self.inner.back().map(Entry::new)
+    }
+
+    /// Returns `true` if the set contains a value for the specified key.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set: SkipSet<_> = (1..=3).collect();
+    /// assert!(set.contains(&1));
+    /// assert!(!set.contains(&4));
+    /// ```
+    pub fn contains<Q>(&self, key: &Q) -> bool
+    where
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        self.inner.contains_key(key)
+    }
+
+    /// Returns an entry with the specified `key`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set: SkipSet<_> = (1..=3).collect();
+    /// assert_eq!(*set.get(&3).unwrap(), 3);
+    /// assert!(set.get(&4).is_none());
+    /// ```
+    pub fn get<Q>(&self, key: &Q) -> Option<Entry<'_, T, G>>
+    where
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        self.inner.get(key).map(Entry::new)
+    }
+
+    /// Returns an `Entry` pointing to the lowest element whose key is above
+    /// the given bound. If no such element is found then `None` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    /// use std::ops::Bound::*;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(6);
+    /// set.insert(7);
+    /// set.insert(12);
+    ///
+    /// let greater_than_five = set.lower_bound(Excluded(&5)).unwrap();
+    /// assert_eq!(*greater_than_five, 6);
+    ///
+    /// let greater_than_six = set.lower_bound(Excluded(&6)).unwrap();
+    /// assert_eq!(*greater_than_six, 7);
+    ///
+    /// let greater_than_thirteen = set.lower_bound(Excluded(&13));
+    /// assert!(greater_than_thirteen.is_none());
+    /// ```
+    pub fn lower_bound<'a, Q>(&'a self, bound: Bound<&Q>) -> Option<Entry<'a, T, G>>
+    where
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        self.inner.lower_bound(bound).map(Entry::new)
+    }
+
+    /// Returns an `Entry` pointing to the highest element whose key is below
+    /// the given bound. If no such element is found then `None` is
+    /// returned.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    /// use std::ops::Bound::*;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(6);
+    /// set.insert(7);
+    /// set.insert(12);
+    ///
+    /// let less_than_eight = set.upper_bound(Excluded(&8)).unwrap();
+    /// assert_eq!(*less_than_eight, 7);
+    ///
+    /// let less_than_six = set.upper_bound(Excluded(&6));
+    /// assert!(less_than_six.is_none());
+    /// ```
+    pub fn upper_bound<'a, Q>(&'a self, bound: Bound<&Q>) -> Option<Entry<'a, T, G>>
+    where
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        self.inner.upper_bound(bound).map(Entry::new)
+    }
+
+    /// Finds an entry with the specified key, or inserts a new `key`-`value`
+    /// pair if none exist.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// let entry = set.get_or_insert(2);
+    /// assert_eq!(*entry, 2);
+    /// ```
+    pub fn get_or_insert(&self, key: T) -> Entry<'_, T, G> {
+        Entry::new(self.inner.get_or_insert(key, ()))
+    }
+
+    /// Returns an iterator over all entries in the set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(6);
+    /// set.insert(7);
+    /// set.insert(12);
+    ///
+    /// let mut set_iter = set.iter();
+    /// assert_eq!(*set_iter.next().unwrap(), 6);
+    /// assert_eq!(*set_iter.next().unwrap(), 7);
+    /// assert_eq!(*set_iter.next().unwrap(), 12);
+    /// assert!(set_iter.next().is_none());
+    /// ```
+    pub fn iter(&self) -> Iter<'_, T, G> {
+        Iter {
+            inner: self.inner.iter(),
+        }
+    }
+
+    /// Returns an iterator over a subset of entries in the set.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(6);
+    /// set.insert(7);
+    /// set.insert(12);
+    ///
+    /// let mut set_range = set.range(5..=8);
+    /// assert_eq!(*set_range.next().unwrap(), 6);
+    /// assert_eq!(*set_range.next().unwrap(), 7);
+    /// assert!(set_range.next().is_none());
+    /// ```
+    pub fn range<Q, R>(&self, range: R) -> Range<'_, Q, R, T, G>
+    where
+        R: RangeBounds<Q>,
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        Range {
+            inner: self.inner.range(range),
+        }
+    }
+}
+
+impl<T, G> SkipSet<T, G>
+where
+    T: Ord + Send + 'static,
+    G: GarbageCollector + Send + 'static,
+{
+    /// Inserts a `key`-`value` pair into the set and returns the new entry.
+    ///
+    /// If there is an existing entry with this key, it will be removed before
+    /// inserting the new one.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(2);
+    /// assert_eq!(*set.get(&2).unwrap(), 2);
+    /// ```
+    pub fn insert(&self, key: T) -> Entry<'_, T, G> {
+        Entry::new(self.inner.insert(key, ()))
+    }
+
+    /// Removes an entry with the specified key from the set and returns it.
+    ///
+    /// The value will not actually be dropped until all references to it have
+    /// gone out of scope.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(2);
+    /// assert_eq!(*set.remove(&2).unwrap(), 2);
+    /// assert!(set.remove(&2).is_none());
+    /// ```
+    pub fn remove<Q>(&self, key: &Q) -> Option<Entry<'_, T, G>>
+    where
+        T: Comparable<Q>,
+        Q: ?Sized,
+    {
+        self.inner.remove(key).map(Entry::new)
+    }
+
+    /// Removes an entry from the front of the set.
+    /// Returns the removed entry.
+    ///
+    /// The value will not actually be dropped until all references to it have
+    /// gone out of scope.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(1);
+    /// set.insert(2);
+    ///
+    /// assert_eq!(*set.pop_front().unwrap(), 1);
+    /// assert_eq!(*set.pop_front().unwrap(), 2);
+    ///
+    /// // All entries have been removed now.
+    /// assert!(set.is_empty());
+    /// ```
+    pub fn pop_front(&self) -> Option<Entry<'_, T, G>> {
+        self.inner.pop_front().map(Entry::new)
+    }
+
+    /// Removes an entry from the back of the set.
+    /// Returns the removed entry.
+    ///
+    /// The value will not actually be dropped until all references to it have
+    /// gone out of scope.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(1);
+    /// set.insert(2);
+    ///
+    /// assert_eq!(*set.pop_back().unwrap(), 2);
+    /// assert_eq!(*set.pop_back().unwrap(), 1);
+    ///
+    /// // All entries have been removed now.
+    /// assert!(set.is_empty());
+    /// ```
+    pub fn pop_back(&self) -> Option<Entry<'_, T, G>> {
+        self.inner.pop_back().map(Entry::new)
+    }
+
+    /// Iterates over the set and removes every entry.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use crossbeam_skiplist::SkipSet;
+    ///
+    /// let set = SkipSet::new();
+    /// set.insert(1);
+    /// set.insert(2);
+    ///
+    /// set.clear();
+    /// assert!(set.is_empty());
+    /// ```
+    pub fn clear(&self) {
+        self.inner.clear();
+    }
+}
+
+impl<T, G> Default for SkipSet<T, G>
+where
+    G: GarbageCollector,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, G> fmt::Debug for SkipSet<T, G>
+where
+    T: Ord + fmt::Debug,
+    G: GarbageCollector,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad("SkipSet { .. }")
+    }
+}
+
+impl<T, G> IntoIterator for SkipSet<T, G>
+where
+    G: GarbageCollector,
+{
+    type Item = T;
+    type IntoIter = IntoIter<T>;
+
+    fn into_iter(self) -> IntoIter<T> {
+        IntoIter {
+            inner: self.inner.into_iter(),
+        }
+    }
+}
+
+impl<'a, T, G> IntoIterator for &'a SkipSet<T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    type Item = Entry<'a, T, G>;
+    type IntoIter = Iter<'a, T, G>;
+
+    fn into_iter(self) -> Iter<'a, T, G> {
+        self.iter()
+    }
+}
+
+impl<T, G> FromIterator<T> for SkipSet<T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = T>,
+    {
+        let s = Self::new();
+        for t in iter {
+            s.get_or_insert(t);
+        }
+        s
+    }
+}
+
+/// A reference-counted entry in a set.
+pub struct Entry<'a, T, G = GlobalGc>
+where
+    G: GarbageCollector,
+{
+    inner: map::Entry<'a, T, (), G>,
+}
+
+impl<'a, T, G> Entry<'a, T, G>
+where
+    G: GarbageCollector,
+{
+    fn new(inner: map::Entry<'a, T, (), G>) -> Self {
+        Self { inner }
+    }
+
+    /// Returns a reference to the value.
+    pub fn value(&self) -> &'a T {
+        self.inner.key()
+    }
+
+    /// Returns `true` if the entry is removed from the set.
+    pub fn is_removed(&self) -> bool {
+        self.inner.is_removed()
+    }
+}
+
+impl<'a, T, G> Entry<'a, T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    /// Moves to the next entry in the set.
+    pub fn move_next(&mut self) -> bool {
+        self.inner.move_next()
+    }
+
+    /// Moves to the previous entry in the set.
+    pub fn move_prev(&mut self) -> bool {
+        self.inner.move_prev()
+    }
+
+    /// Returns the next entry in the set.
+    pub fn next(&self) -> Option<Entry<'a, T, G>> {
+        self.inner.next().map(Entry::new)
+    }
+
+    /// Returns the previous entry in the set.
+    pub fn prev(&self) -> Option<Entry<'a, T, G>> {
+        self.inner.prev().map(Entry::new)
+    }
+}
+
+impl<T, G> Entry<'_, T, G>
+where
+    T: Ord + Send + 'static,
+    G: GarbageCollector,
+{
+    /// Removes the entry from the set.
+    ///
+    /// Returns `true` if this call removed the entry and `false` if it was
+    /// already removed.
+    pub fn remove(&self) -> bool {
+        self.inner.remove()
+    }
+}
+
+impl<T, G> Clone for Entry<'_, T, G>
+where
+    G: GarbageCollector,
+{
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<T, G> fmt::Debug for Entry<'_, T, G>
+where
+    T: fmt::Debug,
+    G: GarbageCollector,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Entry")
+            .field("value", self.value())
+            .finish()
+    }
+}
+
+impl<T, G> Deref for Entry<'_, T, G>
+where
+    G: GarbageCollector,
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.value()
+    }
+}
+
+/// An owning iterator over the entries of a `SkipSet`.
+pub struct IntoIter<T> {
+    inner: map::IntoIter<T, ()>,
+}
+
+impl<T> Iterator for IntoIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        self.inner.next().map(|(k, ())| k)
+    }
+}
+
+impl<T> fmt::Debug for IntoIter<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad("IntoIter { .. }")
+    }
+}
+
+/// An iterator over the entries of a `SkipSet`.
+pub struct Iter<'a, T, G = GlobalGc>
+where
+    G: GarbageCollector,
+{
+    inner: map::Iter<'a, T, (), G>,
+}
+
+impl<'a, T, G> Iterator for Iter<'a, T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    type Item = Entry<'a, T, G>;
+
+    fn next(&mut self) -> Option<Entry<'a, T, G>> {
+        self.inner.next().map(Entry::new)
+    }
+}
+
+impl<'a, T, G> DoubleEndedIterator for Iter<'a, T, G>
+where
+    T: Ord,
+    G: GarbageCollector,
+{
+    fn next_back(&mut self) -> Option<Entry<'a, T, G>> {
+        self.inner.next_back().map(Entry::new)
+    }
+}
+
+impl<T, G> fmt::Debug for Iter<'_, T, G>
+where
+    G: GarbageCollector,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad("Iter { .. }")
+    }
+}
+
+/// An iterator over a subset of entries of a `SkipSet`.
+pub struct Range<'a, Q, R, T, G = GlobalGc>
+where
+    T: Ord + Comparable<Q>,
+    R: RangeBounds<Q>,
+    Q: ?Sized,
+    G: GarbageCollector,
+{
+    inner: map::Range<'a, Q, R, T, (), G>,
+}
+
+impl<'a, Q, R, T, G> Iterator for Range<'a, Q, R, T, G>
+where
+    T: Ord + Comparable<Q>,
+    R: RangeBounds<Q>,
+    Q: ?Sized,
+    G: GarbageCollector,
+{
+    type Item = Entry<'a, T, G>;
+
+    fn next(&mut self) -> Option<Entry<'a, T, G>> {
+        self.inner.next().map(Entry::new)
+    }
+}
+
+impl<'a, Q, R, T, G> DoubleEndedIterator for Range<'a, Q, R, T, G>
+where
+    T: Ord + Comparable<Q>,
+    R: RangeBounds<Q>,
+    Q: ?Sized,
+    G: GarbageCollector,
+{
+    fn next_back(&mut self) -> Option<Entry<'a, T, G>> {
+        self.inner.next_back().map(Entry::new)
+    }
+}
+
+impl<Q, R, T, G> fmt::Debug for Range<'_, Q, R, T, G>
+where
+    T: Ord + Comparable<Q> + fmt::Debug,
+    R: RangeBounds<Q> + fmt::Debug,
+    Q: ?Sized,
+    G: GarbageCollector,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Range")
+            .field("range", &self.inner.inner.range)
+            .field("head", &self.inner.inner.head.as_ref().map(|e| e.key()))
+            .field("tail", &self.inner.inner.tail.as_ref().map(|e| e.key()))
+            .finish()
+    }
+}

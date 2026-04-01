@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.checkOnSave": true,
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.check.extraArgs": [
+        "--target",
+        "x86_64-unknown-uefi",
+    ]
+}

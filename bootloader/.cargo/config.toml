@@ -1,0 +1,10 @@
+[build]
+target = "x86_64-unknown-uefi"
+target-dir = "../target"
+
+[target.x86_64-unknown-uefi]
+rustflags = ["-C", "link-args=/debug:dwarf"]
+
+[unstable]
+build-std = ["core", "compiler_builtins", "alloc"]
+build-std-features = ["compiler-builtins-mem"]

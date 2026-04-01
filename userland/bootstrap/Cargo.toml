@@ -1,0 +1,8 @@
+[package]
+name = "bootstrap"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+libakarin-syscall = { path = "../../library/syscall" }
+userland-runtime = { path = "../runtime" }
